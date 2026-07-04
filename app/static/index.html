@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Научный клубок — карта знаний R&D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#0f1420;--panel:#181f30;--panel2:#1e2740;--txt:#dfe6f3;--mut:#8b97b0;--acc:#4da3ff;--acc2:#ffb454;--ok:#5fd39a;--warn:#ff7a6e;--line:#2a3550}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:19px;margin:0}
+header .logo{width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--acc),var(--acc2),var(--ok),var(--acc));display:grid;place-items:center;font-size:18px}
+.tabs{display:flex;gap:4px;padding:10px 22px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+.tab{padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--mut);border:1px solid transparent}
+.tab.active{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-bottom-color:var(--bg)}
+main{padding:18px 22px;max-width:1400px;margin:0 auto}
+.searchbox{display:flex;gap:10px}
+.searchbox input{flex:1;padding:12px 16px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--txt)}
+.searchbox button{padding:12px 26px;font-size:16px;border-radius:10px;border:0;background:var(--acc);color:#04101f;font-weight:600;cursor:pointer;min-width:190px}
+.searchbox button:disabled{opacity:.6;cursor:wait}
+.examples{margin:10px 0 4px;display:flex;flex-wrap:wrap;gap:8px}
+.examples span{font-size:12.5px;color:var(--acc);background:var(--panel);border:1px solid var(--line);padding:4px 10px;border-radius:14px;cursor:pointer}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+#answer{white-space:pre-wrap;font-size:14.5px}
+#answer mark{background:#3d4f14;color:#e8ffb0}
+.src{padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.src .t{color:var(--acc);font-weight:600}
+.src .m{color:var(--mut);font-size:12px}
+.src mark{background:#3d4f14;color:#e8ffb0}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;margin-left:6px;background:var(--panel2);color:var(--mut)}
+.gap{color:var(--warn);font-size:13.5px;padding:4px 0}
+.expert{display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px;border-top:1px solid var(--line)}
+.param{font-size:13px;padding:4px 0;border-top:1px solid var(--line)}
+.param b{color:var(--acc2)}
+canvas{width:100%;border-radius:10px;background:var(--bg)}
+#legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mut);margin-top:8px}
+#legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+table.gapm{border-collapse:collapse;font-size:12.5px;width:100%}
+table.gapm th,table.gapm td{border:1px solid var(--line);padding:5px 8px;text-align:center}
+table.gapm th{color:var(--mut);font-weight:500}
+table.gapm th:first-child{text-align:left}
+td.z{background:#3a1e24;color:var(--warn);font-weight:700}
+td.l{background:#31371f}
+td.h{background:#1e3a2a;color:var(--ok)}
+.hidden{display:none}
+.dot{display:inline-block;width:11px;height:11px;border:2px solid #04101f;border-top-color:transparent;border-radius:50%;animation:rot .9s linear infinite;margin-right:8px;vertical-align:-1px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.engine{font-size:11.5px;color:var(--mut);margin-top:8px}
+table.mdt{border-collapse:collapse;margin:8px 0;font-size:13px;width:100%;white-space:normal}
+table.mdt th,table.mdt td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+table.mdt th{color:var(--acc2);background:var(--panel2)}
+select#role{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-left:auto}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🧶</div>
+  <h1>Научный клубок <span style="color:var(--mut);font-weight:400;font-size:14px">— карта знаний R&D для горно-металлургической отрасли</span></h1>
+  <select id="role" onchange="localStorage.setItem('role',this.value);if(document.querySelector('.tab.active').dataset.tab==='dash')loadDash()" title="Ролевая модель доступа">
+    <option value="researcher">👤 Исследователь</option>
+    <option value="analyst">📊 Аналитик</option>
+    <option value="lead">🎯 Руководитель проекта</option>
+    <option value="admin">🛠 Администратор</option>
+    <option value="partner">🤝 Внешний партнёр</option>
+  </select>
+</header>
+<div class="tabs">
+  <div class="tab active" data-tab="search">Поиск и анализ</div>
+  <div class="tab" data-tab="gaps">Карта пробелов</div>
+  <div class="tab" data-tab="dash">Дашборд руководителя</div>
+</div>
+<main>
+<section id="tab-search">
+  <div class="searchbox">
+    <input id="q" placeholder="Спросите: что уже делали по материалу X при режиме Y и какой был эффект на свойство Z?" onkeydown="if(event.key==='Enter')ask()">
+    <button id="btn" onclick="ask()">Найти</button>
+  </div>
+  <div class="examples" id="examples"></div>
+  <div class="grid hidden" id="results">
+    <div>
+      <div class="card"><h3>Найденная информация <span class="engine" id="engine"></span></h3><div id="answer"></div></div>
+      <div class="card" style="margin-top:16px"><h3>Граф связанных сущностей <span class="badge">клик по узлу — детали</span></h3>
+        <canvas id="graph" height="420"></canvas><div id="legend"></div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--mut)">
+          Правка графа: <input id="e-src" placeholder="сущность А" style="width:120px;padding:4px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt)">
+          <input id="e-rel" placeholder="связь" style="width:110px;padding:4px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt)">
+          <input id="e-dst" placeholder="сущность Б" style="width:120px;padding:4px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt)">
+          <input id="e-author" placeholder="автор" style="width:100px;padding:4px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt)">
+          <button onclick="addEdge()" style="padding:4px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt);cursor:pointer">Добавить</button>
+        </div></div>
+    </div>
+    <div>
+      <div class="card"><h3>Источники (<span id="nsrc">0</span>)</h3><div id="sources"></div></div>
+      <div class="card hidden" style="margin-top:16px" id="gapcard"><h3>Пробелы в данных</h3><div id="gaplist"></div></div>
+      <div class="card" style="margin-top:16px"><h3>Экспорт</h3>
+        <button onclick="exp()" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;margin-right:8px">JSON-LD</button>
+        <button onclick="expMd()" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;margin-right:8px">Markdown</button>
+        <button onclick="expPdf()" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer">PDF</button></div>
+      <div class="card" style="margin-top:16px"><h3>Подписка на тему</h3>
+        <button onclick="watch()" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer">🔔 Следить за темой</button>
+        <div style="font-size:11.5px;color:var(--mut);margin-top:6px">Уведомит о новых документах по этому запросу при доиндексации базы</div></div>
+    </div>
+  </div>
+</section>
+<section id="tab-gaps" class="hidden">
+  <div class="card">
+    <h3>Матрица покрытия «Материал × Процесс» — число источников, связывающих пару. <span style="color:var(--warn)">0 = пробел в знаниях</span></h3>
+    <div style="margin-bottom:10px">
+      <select id="gt1" onchange="loadGaps()"><option>Material</option><option>Process</option><option>Equipment</option><option>Property</option></select> ×
+      <select id="gt2" onchange="loadGaps()"><option>Process</option><option>Material</option><option>Equipment</option><option>Property</option><option>Location</option></select>
+    </div>
+    <div id="gapmatrix">загрузка…</div>
+  </div>
+</section>
+<section id="tab-dash" class="hidden">
+  <div class="grid">
+    <div>
+      <div class="card"><h3>Покрытие знаний по направлениям</h3><div id="dash-domains">…</div></div>
+      <div class="card" style="margin-top:16px"><h3>Зоны риска — темы с малым числом источников (≤3)</h3><div id="dash-risk">…</div></div>
+    </div>
+    <div>
+      <div class="card"><h3>Состав корпуса</h3><div id="dash-cats">…</div></div>
+      <div class="card" style="margin-top:16px"><h3>Активность: последние запросы (аудит)</h3><div id="dash-recent">…</div></div>
+    </div>
+  </div>
+</section>
+</main>
+<script>
+const COLORS={Material:'#4da3ff',Process:'#ffb454',Equipment:'#5fd39a',Property:'#c792ea',Location:'#ff7a6e',Expert:'#ffd76e',Lab:'#6ee7de',Publication:'#8b97b0',Parameter:'#e0e0e0'};
+const EXAMPLES=[
+ 'Какие методы обессоливания воды подходят, если вода содержит сульфаты и хлориды 200–300 мг/л?',
+ 'Какие технические решения циркуляции католита при электроэкстракции никеля описаны в мировой практике?',
+ 'Эксперименты и публикации по распределению Au, Ag и МПГ между штейном и шлаком за последние 5 лет',
+ 'Кучное выщелачивание никелевой руды в холодном климате — что известно?',
+ 'Способы очистки газов от SO2: отечественная практика',
+];
+document.getElementById('examples').innerHTML=EXAMPLES.map(e=>`<span onclick="document.getElementById('q').value=this.textContent;ask()">${e}</span>`).join('');
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+ document.getElementById('tab-search').classList.toggle('hidden',t.dataset.tab!=='search');
+ document.getElementById('tab-gaps').classList.toggle('hidden',t.dataset.tab!=='gaps');
+ document.getElementById('tab-dash').classList.toggle('hidden',t.dataset.tab!=='dash');
+ if(t.dataset.tab==='gaps')loadGaps();
+ if(t.dataset.tab==='dash')loadDash();
+});
+document.getElementById('role').value=localStorage.getItem('role')||'researcher';
+function api(url,opts){opts=opts||{};opts.headers=Object.assign({'X-Role':document.getElementById('role').value},opts.headers||{});return fetch(url,opts);}
+let lastQ='',lastData=null;
+function spin(on){
+ const b=document.getElementById('btn');b.disabled=on;
+ b.innerHTML=on?'<span class="dot"></span>Готовлю ответ…':'Найти';
+}
+async function ask(){
+ const q=document.getElementById('q').value.trim();if(!q)return;lastQ=q;
+ spin(true);document.getElementById('results').classList.add('hidden');
+ try{
+  const r=await api('api/ask?q='+encodeURIComponent(q));
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  render(await r.json());
+ }catch(e){alert('Ошибка запроса: '+e)}
+ spin(false);
+}
+function render(d){
+ lastData=d;
+ document.getElementById('results').classList.remove('hidden');
+ document.getElementById('answer').innerHTML=md(esc(d.answer));
+ document.getElementById('engine').textContent='('+d.engine+')'+(d.llm_error?' — LLM недоступен: '+d.llm_error.slice(0,120):'');
+ const byDoc=new Map();
+ d.sources.forEach(s=>{const k=s.title;if(!byDoc.has(k))byDoc.set(k,{...s,frags:0});byDoc.get(k).frags++;});
+ const docs=[...byDoc.values()];
+ document.getElementById('nsrc').textContent=docs.length;
+ document.getElementById('sources').innerHTML=docs.map(s=>
+  `<div class="src"><div class="t"><a href="api/file?path=${encodeURIComponent(s.path)}" target="_blank" style="color:var(--acc);text-decoration:none" title="Открыть документ">${esc(s.title)} ↗</a></div>
+   <div class="m">${s.category||''} · ${s.year||'год н/д'} · ${s.geography||''} · стр. ${s.page}${s.frags>1?' · фрагментов: '+s.frags:''}</div>
+   <div>${s.text}</div></div>`).join('')||'<i style="color:var(--mut)">не найдено</i>';
+ toggle('gapcard',d.gaps.length);document.getElementById('gaplist').innerHTML=d.gaps.map(g=>`<div class="gap">⚠ ${esc(g)}</div>`).join('');
+ drawGraph(d.graph);
+}
+function toggle(id,show){document.getElementById(id).classList.toggle('hidden',!show)}
+function md(s){
+ // лёгкий markdown: заголовки, жирный, таблицы (| a | b |), разделители
+ const lines=s.split('\n');const out=[];let tbl=null;
+ const bold=t=>t.replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--txt)">$1</b>');
+ const flush=()=>{if(!tbl)return;
+  let h='<table class="mdt">';tbl.forEach((row,i)=>{const tag=i===0?'th':'td';
+   h+='<tr>'+row.map(c=>`<${tag}>${bold(c)}</${tag}>`).join('')+'</tr>';});
+  out.push(h+'</table>');tbl=null;};
+ for(const l of lines){
+  const t=l.trim();
+  if(/^\|.*\|$/.test(t)){
+   const cells=t.slice(1,-1).split('|').map(c=>c.trim());
+   if(cells.every(c=>/^:?-{2,}:?$/.test(c)))continue; // разделитель шапки
+   (tbl=tbl||[]).push(cells);continue;
+  }
+  flush();
+  if(/^#{1,3} /.test(t)){out.push('<div style="font-weight:700;color:var(--acc2);margin-top:10px;font-size:'+(t.startsWith('###')?'14.5':'16')+'px">'+t.replace(/^#{1,3} /,'')+'</div>');continue;}
+  if(/^---+$/.test(t)){out.push('<hr style="border:0;border-top:1px solid var(--line)">');continue;}
+  out.push(bold(l));
+ }
+ flush();return out.join('\n').replace(/\n{3,}/g,'\n\n');
+}
+function esc(s){return (s??'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/&lt;mark&gt;/g,'<mark>').replace(/&lt;\/mark&gt;/g,'</mark>')}
+function exp(){
+ if(!lastData){alert('Сначала выполните запрос');return;}
+ const d={
+  "@context":{"@vocab":"https://schema.org/","kg":"urn:kg:"},
+  "@type":"Dataset","name":"Ответ на запрос: "+lastQ,
+  "dateCreated":new Date().toISOString(),
+  "text":lastData.answer,
+  "hasPart":lastData.sources.map(s=>({"@type":"CreativeWork","name":s.title,
+    "temporalCoverage":s.year,"spatialCoverage":s.geography,"pagination":s.page})),
+  "about":lastData.graph.nodes.filter(n=>n.root).map(n=>({"@type":"DefinedTerm","name":n.label,"inDefinedTermSet":n.type})),
+  "kg:parameters":lastData.params,"kg:experts":lastData.experts,"kg:gaps":lastData.gaps
+ };
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/ld+json'}));
+ a.download='answer.jsonld';
+ document.body.appendChild(a);a.click();a.remove();
+}
+function expMd(){
+ if(!lastData){alert('Сначала выполните запрос');return;}
+ const src=lastData.sources.map((s,i)=>`${i+1}. **${s.title}** — ${s.category||''}, ${s.year||'год н/д'}, ${s.geography||''}, стр. ${s.page}`).join('\n');
+ const pars=lastData.params.map(p=>`- ${p.entity}: ${p.raw} — ${p.doc} (${p.year||'н/д'})`).join('\n');
+ const gaps=lastData.gaps.map(g=>`- ⚠ ${g}`).join('\n');
+ const exps=lastData.experts.map(e=>`- ${e.name} (${e.docs} док.)`).join('\n');
+ const txt=`# ${lastQ}\n\n_Сформировано системой «Научный клубок», ${new Date().toLocaleString('ru')}_\n\n${lastData.answer}\n\n## Источники\n${src}\n\n## Числовые параметры\n${pars||'—'}\n\n## Пробелы\n${gaps||'—'}\n\n## Эксперты\n${exps||'—'}\n`;
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([txt],{type:'text/markdown'}));
+ a.download='review.md';document.body.appendChild(a);a.click();a.remove();
+}
+// ---------- force-directed graph on canvas ----------
+let G=null,anim=null;
+function drawGraph(g){
+ const cv=document.getElementById('graph');const W=cv.width=cv.clientWidth*2;const H=cv.height=840;
+ const ctx=cv.getContext('2d');
+ if(anim)cancelAnimationFrame(anim);
+ const nodes=g.nodes.map((n,i)=>({...n,x:W/2+Math.cos(i*2.4)*(n.root?60:260)+Math.random()*40,y:H/2+Math.sin(i*2.4)*(n.root?60:200)+Math.random()*40,vx:0,vy:0}));
+ const idx=Object.fromEntries(nodes.map((n,i)=>[n.id,i]));
+ const edges=g.edges.filter(e=>idx[e.from]!=null&&idx[e.to]!=null);
+ const types=[...new Set(nodes.map(n=>n.type))];
+ document.getElementById('legend').innerHTML=types.map(t=>`<span><i style="background:${COLORS[t]||'#999'}"></i>${t}</span>`).join('');
+ G={nodes,edges,idx};
+ let tick=0;
+ function step(){
+  tick++;
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+   const a=nodes[i],b=nodes[j];let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+0.01,d=Math.sqrt(d2);
+   const f=Math.min(12,9000/d2);dx/=d;dy/=d;a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;}
+  for(const e of edges){const a=nodes[idx[e.from]],b=nodes[idx[e.to]];
+   let dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+.01;const f=(d-140)*.01;
+   a.vx+=dx/d*f;a.vy+=dy/d*f;b.vx-=dx/d*f;b.vy-=dy/d*f;}
+  for(const n of nodes){n.vx+=(W/2-n.x)*.002;n.vy+=(H/2-n.y)*.002;
+   n.x+=n.vx*=.82;n.y+=n.vy*=.82;n.x=Math.max(30,Math.min(W-30,n.x));n.y=Math.max(24,Math.min(H-24,n.y));}
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#2a3550';ctx.fillStyle='#8b97b0';ctx.font='16px Segoe UI';
+  for(const e of edges){const a=nodes[idx[e.from]],b=nodes[idx[e.to]];
+   ctx.lineWidth=Math.min(6,1+Math.log1p(e.weight||1));ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+   if(e.rel&&e.rel!=='related_to'&&(a.root||b.root)){ctx.fillStyle='#5a6a8c';ctx.fillText(e.rel,(a.x+b.x)/2+4,(a.y+b.y)/2);}
+  }
+  for(const n of nodes){
+   const r=n.root?16:9;
+   ctx.beginPath();ctx.arc(n.x,n.y,r,0,7);ctx.fillStyle=COLORS[n.type]||'#999';ctx.fill();
+   if(n.root){ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.stroke();}
+   ctx.fillStyle='#dfe6f3';ctx.font=(n.root?'bold 20px':'16px')+' Segoe UI';
+   ctx.fillText(n.label.slice(0,28),n.x+r+4,n.y+5);
+  }
+  if(tick<220)anim=requestAnimationFrame(step);
+ }
+ step();
+ cv.onclick=ev=>{
+  const rect=cv.getBoundingClientRect();const x=(ev.clientX-rect.left)*(W/rect.width),y=(ev.clientY-rect.top)*(H/rect.height);
+  for(const n of G.nodes)if((n.x-x)**2+(n.y-y)**2<400){showNode(n.label,n.type);break;}
+ };
+}
+async function showNode(canon,type){
+ const r=await fetch('api/node?canon='+encodeURIComponent(canon)+'&type='+encodeURIComponent(type));const d=await r.json();
+ if(d.error)return;
+ const docs=d.documents.slice(0,6).map(x=>`• ${x.title} (${x.year||'н/д'})`).join('\n');
+ const pars=d.params.slice(0,6).map(x=>`• ${x.raw} — ${x.title}`).join('\n');
+ alert(`${d.canon} [${d.type}]\n\nСвязей: ${d.neighbors.length}\n\nДокументы:\n${docs||'—'}\n\nПараметры:\n${pars||'—'}`);
+}
+async function loadDash(){
+ const r=await api('api/dashboard');const d=await r.json();
+ if(d.error){['dash-domains','dash-risk','dash-cats','dash-recent'].forEach(id=>document.getElementById(id).innerHTML='<span style="color:var(--warn)">'+esc(d.error)+'</span>');return;}
+ const maxd=Math.max(1,...d.domains.map(x=>x.docs));
+ document.getElementById('dash-domains').innerHTML=d.domains.map(x=>
+  `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(x.domain)}</span><span style="color:var(--mut)">${x.docs} док. · ${x.mentions} упоминаний</span></div>
+   <div style="height:8px;background:var(--panel2);border-radius:4px"><div style="height:8px;width:${Math.round(100*x.docs/maxd)}%;background:var(--acc);border-radius:4px"></div></div></div>`).join('');
+ document.getElementById('dash-risk').innerHTML=d.risk.map(x=>
+  `<div class="gap">⚠ ${esc(x.canon)} <span class="badge">${x.type}</span> — всего ${x.docs} ист.</div>`).join('')||'—';
+ document.getElementById('dash-cats').innerHTML=d.by_category.map(x=>
+  `<div class="expert"><span>${esc(x.category)}</span><span style="color:var(--mut)">${x.docs} док.</span></div>`).join('');
+ document.getElementById('dash-recent').innerHTML=(d.recent_queries||[]).map(x=>
+  `<div class="src"><div style="font-size:13px">${esc(x.query)}</div><div class="m">${x.ts} · ${esc(x.role||'')} · ${esc(x.engine)}</div></div>`).join('')||'—';
+}
+async function watch(){
+ if(!lastQ){alert('Сначала выполните запрос');return;}
+ const r=await api('api/subscribe?q='+encodeURIComponent(lastQ));const d=await r.json();
+ alert(d.message||JSON.stringify(d));
+}
+function expPdf(){
+ if(!lastData){alert('Сначала выполните запрос');return;}
+ const w=window.open('','_blank');
+ w.document.write('<html><head><title>'+esc(lastQ)+'</title><style>body{font:13px/1.5 Segoe UI,Arial;margin:28px;color:#111}table{border-collapse:collapse}td,th{border:1px solid #999;padding:5px 8px;font-size:12px}h1{font-size:18px}mark{background:#ff9}</style></head><body><h1>'+esc(lastQ)+'</h1><div style="white-space:pre-wrap">'+md(esc(lastData.answer))+'</div><h2 style="font-size:15px">Источники</h2><ol>'+lastData.sources.map(s=>'<li>'+esc(s.title)+' — '+(s.category||'')+', '+(s.year||'год н/д')+', стр. '+s.page+'</li>').join('')+'</ol><p style="color:#777;font-size:11px">Сформировано системой «Научный клубок», '+new Date().toLocaleString('ru')+'</p></body></html>');
+ w.document.close();setTimeout(()=>w.print(),300);
+}
+async function addEdge(){
+ const src=document.getElementById('e-src').value.trim(),rel=document.getElementById('e-rel').value.trim()||'related_to',
+       dst=document.getElementById('e-dst').value.trim(),author=document.getElementById('e-author').value.trim()||'аноним';
+ if(!src||!dst){alert('Укажите обе сущности (канонические имена из графа)');return;}
+ const r=await api('api/graph_edit',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({src,rel,dst,author,comment:'добавлено через UI'})});
+ const d=await r.json();alert(d.message||d.error||'готово');
+}
+// ---------- gap matrix ----------
+async function loadGaps(){
+ const t1=document.getElementById('gt1').value,t2=document.getElementById('gt2').value;
+ document.getElementById('gapmatrix').textContent='загрузка…';
+ const d=await(await fetch(`api/gaps?type1=${t1}&type2=${t2}`)).json();
+ const max=Math.max(1,...d.matrix.flat());
+ let h='<table class="gapm"><tr><th></th>'+d.cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>';
+ d.rows.forEach((r,i)=>{h+=`<tr><th>${esc(r)}</th>`+d.matrix[i].map(v=>
+  `<td class="${v===0?'z':v>max*.3?'h':'l'}">${v}</td>`).join('')+'</tr>';});
+ document.getElementById('gapmatrix').innerHTML=h+'</table>';
+}
+</script>
+</body>
+</html>
